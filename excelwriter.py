@@ -14,7 +14,6 @@ class ExcelFile:
         else: # Create new workbook
             self.workbook = Workbook()
             if 'Sheet' in self.workbook.sheetnames: self.workbook.remove(self.workbook['Sheet']) # Remove default sheet
-        self.basic_style = {}
 
     def get_resource_path(self, relative_path: str):
         '''
@@ -68,12 +67,12 @@ class ExcelFile:
         if show_headers:
             for col, header in enumerate(headers, start_col):
                 ws.cell(row, col).value = header
-                if self.basic_style or header_style: self._apply_cell_style(ws.cell(row, col), **header_style)
+                if header_style: self._apply_cell_style(ws.cell(row, col), **header_style)
             row += 1
         for data in datas:
             for col, header in enumerate(headers, start_col):
                 ws.cell(row, col).value = data.get(header)
-                if self.basic_style or content_style: self._apply_cell_style(ws.cell(row, col), **content_style)
+                if content_style: self._apply_cell_style(ws.cell(row, col), **content_style)
             row += 1
     
     def write_cols(self, sheet: str="", position: tuple = (1, 1), datas: dict={}, headers: list=[], show_headers: bool = True, header_style: dict = {}, content_style: dict = {}):
@@ -82,8 +81,8 @@ class ExcelFile:
         position: tuple of (start_row, start_col)
         datas: dict of (header, list) pairs, where each list is a column of data
         headers: list of column headers
-        header_style: style dict for header cells (overrides basic_style)
-        content_style: style dict for content cells (overrides basic_style)
+        header_style: style dict for header cells
+        content_style: style dict for content cells
         '''
         ws = self.get_sheet(sheet)
         start_row, start_col = position
@@ -93,27 +92,28 @@ class ExcelFile:
         for col, header in enumerate(headers, start_col):
             if show_headers:
                 ws.cell(start_row, col).value = header
-                if self.basic_style or header_style: self._apply_cell_style(ws.cell(start_row, col), **header_style)
+                if header_style: self._apply_cell_style(ws.cell(start_row, col), **header_style)
             for row, value in enumerate(datas.get(header, []), data_start_row):
                 ws.cell(row, col).value = value
-                if self.basic_style or content_style: self._apply_cell_style(ws.cell(row, col), **content_style)
+                if content_style: self._apply_cell_style(ws.cell(row, col), **content_style)
     
-    def write_cell(self, sheet: str="", position: tuple=(1,1), content: any=None, **kwargs):
+    def write_cell(self, sheet: str="", position: tuple=(1,1), content: any=None, content_style: dict = {}):
         '''
         Write content to cell.
         position: tuple of (row, col)
         content: content to write to cell
-        kwargs: keyword arguments for cell style
+        content_style: style dict for content cell (overrides basic_style)
         '''
         ws = self.get_sheet(sheet)
         row, col = position
         ws.cell(row, col).value = content
-        if self.basic_style or kwargs:
-            self._apply_cell_style(ws.cell(row, col), **kwargs)
+        if content_style: self._apply_cell_style(ws.cell(row, col), **content_style)
     
     def _apply_cell_style(self, cell, **kwargs):
-        merged_kwargs = {**self.basic_style, **kwargs}
-        kwargs = merged_kwargs
+        '''
+        Apply cell style to cell.
+        kwargs: keyword arguments for cell style
+        '''
         if 'font' in kwargs:
             cell.font = kwargs.pop('font')
         elif font_props := {k: kwargs.pop(k) for k in ['name', 'size', 'bold', 'italic', 'underline', 'color'] if k in kwargs}:
@@ -151,78 +151,174 @@ class ExcelFile:
 
 if __name__ == "__main__":
     excel_file = ExcelFile("test.xlsx")
-    
-    # Styling Examples
     ws = excel_file.get_sheet("styling_examples")
     row = 1
     
-    # Font examples
-    excel_file.write_cell("styling_examples", (row, 1), "Font Examples", bold=True, size=14)
+    # Title
+    excel_file.write_cell("styling_examples", (row, 1), "Complete Style Examples", content_style={'bold': True, 'size': 16, 'fgColor': '4472C4', 'color': 'FFFFFF', 'horizontal': 'center'})
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=8)
+    row += 3
+    
+    # FONT STYLES
+    excel_file.write_cell("styling_examples", (row, 1), "FONT PROPERTIES", content_style={'bold': True, 'size': 14, 'fgColor': 'D9E1F2'})
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)
+    row += 1
+    excel_file.write_cell("styling_examples", (row, 1), "Property", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 2), "Example", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 3), "Values", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 4), "Code", content_style={'bold': True})
+    row += 1
+    
+    font_examples = [
+        ("name", "Font Name", "Arial", {'name': 'Arial'}),
+        ("size", "Font Size", "16pt", {'size': 16}),
+        ("bold", "Bold Text", "Bold", {'bold': True}),
+        ("italic", "Italic Text", "Italic", {'italic': True}),
+        ("underline", "Underline", "Underlined", {'underline': 'single'}),
+        ("color", "Font Color", "Red Text", {'color': 'FF0000'}),
+    ]
+    for prop, label, value, style in font_examples:
+        excel_file.write_cell("styling_examples", (row, 1), prop, content_style={'italic': True})
+        excel_file.write_cell("styling_examples", (row, 2), label, content_style=style)
+        excel_file.write_cell("styling_examples", (row, 3), value)
+        excel_file.write_cell("styling_examples", (row, 4), str(style))
+        row += 1
+    excel_file.write_cell("styling_examples", (row, 2), "Combined", content_style={'bold': True, 'italic': True, 'size': 14, 'color': '0000FF'})
+    excel_file.write_cell("styling_examples", (row, 4), "{'bold': True, 'italic': True, 'size': 14, 'color': '0000FF'}")
     row += 2
     
-    excel_file.write_cell("styling_examples", (row, 1), "Bold", bold=True)
-    excel_file.write_cell("styling_examples", (row, 2), "Italic", italic=True)
-    excel_file.write_cell("styling_examples", (row, 3), "Underline", underline="single")
-    excel_file.write_cell("styling_examples", (row, 4), "Large Size", size=16)
-    excel_file.write_cell("styling_examples", (row, 5), "Arial Font", name="Arial")
-    excel_file.write_cell("styling_examples", (row, 6), "Red Color", color="FF0000")
-    excel_file.write_cell("styling_examples", (row, 7), "Bold+Italic+Blue", bold=True, italic=True, color="0000FF")
+    # FILL STYLES
+    excel_file.write_cell("styling_examples", (row, 1), "FILL PROPERTIES", content_style={'bold': True, 'size': 14, 'fgColor': 'D9E1F2'})
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)
+    row += 1
+    excel_file.write_cell("styling_examples", (row, 1), "Property", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 2), "Example", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 3), "Color Code", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 4), "Code", content_style={'bold': True})
+    row += 1
+    
+    fill_examples = [
+        ("fgColor", "Yellow Background", "FFFF00", {'fgColor': 'FFFF00'}),
+        ("fgColor", "Green Background", "00FF00", {'fgColor': '00FF00'}),
+        ("fgColor", "Blue Background", "0000FF", {'fgColor': '0000FF', 'color': 'FFFFFF'}),
+        ("fgColor", "Red Background", "FF0000", {'fgColor': 'FF0000', 'color': 'FFFFFF'}),
+        ("fgColor", "Gray Background", "CCCCCC", {'fgColor': 'CCCCCC'}),
+        ("fill_type", "Pattern Fill", "solid", {'fgColor': 'FFC7CE', 'fill_type': 'solid'}),
+    ]
+    for prop, label, code, style in fill_examples:
+        excel_file.write_cell("styling_examples", (row, 1), prop, content_style={'italic': True})
+        excel_file.write_cell("styling_examples", (row, 2), label, content_style=style)
+        excel_file.write_cell("styling_examples", (row, 3), code)
+        excel_file.write_cell("styling_examples", (row, 4), str(style))
+        row += 1
     row += 2
     
-    # Fill examples
-    excel_file.write_cell("styling_examples", (row, 1), "Fill Examples", bold=True, size=14)
+    # ALIGNMENT STYLES
+    excel_file.write_cell("styling_examples", (row, 1), "ALIGNMENT PROPERTIES", content_style={'bold': True, 'size': 14, 'fgColor': 'D9E1F2'})
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)
+    row += 1
+    excel_file.write_cell("styling_examples", (row, 1), "Property", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 2), "Example", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 3), "Values", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 4), "Code", content_style={'bold': True})
+    row += 1
+    
+    align_examples = [
+        ("horizontal", "Left Aligned", "left", {'horizontal': 'left', 'fgColor': 'E7E6E6'}),
+        ("horizontal", "Center Aligned", "center", {'horizontal': 'center', 'fgColor': 'E7E6E6'}),
+        ("horizontal", "Right Aligned", "right", {'horizontal': 'right', 'fgColor': 'E7E6E6'}),
+        ("vertical", "Top Aligned", "top", {'vertical': 'top', 'fgColor': 'E7E6E6'}),
+        ("vertical", "Middle Aligned", "center", {'vertical': 'center', 'fgColor': 'E7E6E6'}),
+        ("vertical", "Bottom Aligned", "bottom", {'vertical': 'bottom', 'fgColor': 'E7E6E6'}),
+        ("wrapText", "Wrap Text", "This text wraps to multiple lines when the cell width is narrow", {'wrapText': True, 'fgColor': 'E7E6E6'}),
+    ]
+    for prop, label, value, style in align_examples:
+        excel_file.write_cell("styling_examples", (row, 1), prop, content_style={'italic': True})
+        excel_file.write_cell("styling_examples", (row, 2), label, content_style=style)
+        excel_file.write_cell("styling_examples", (row, 3), value)
+        excel_file.write_cell("styling_examples", (row, 4), str(style))
+        row += 1
     row += 2
     
-    excel_file.write_cell("styling_examples", (row, 1), "Yellow Fill", fgColor="FFFF00")
-    excel_file.write_cell("styling_examples", (row, 2), "Green Fill", fgColor="00FF00")
-    excel_file.write_cell("styling_examples", (row, 3), "Blue Fill", fgColor="0000FF")
-    excel_file.write_cell("styling_examples", (row, 4), "Red Fill", fgColor="FF0000")
-    excel_file.write_cell("styling_examples", (row, 5), "Pattern Fill", fill_type="lightGray", fgColor="CCCCCC")
+    # BORDER STYLES
+    excel_file.write_cell("styling_examples", (row, 1), "BORDER PROPERTIES", content_style={'bold': True, 'size': 14, 'fgColor': 'D9E1F2'})
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)
+    row += 1
+    excel_file.write_cell("styling_examples", (row, 1), "Property", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 2), "Example", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 3), "Style", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 4), "Code", content_style={'bold': True})
+    row += 1
+    
+    border_examples = [
+        ("border_style", "Thin Border", "thin", {'border_style': 'thin'}),
+        ("border_style", "Thick Border", "thick", {'border_style': 'thick'}),
+        ("border_style", "Dashed Border", "dashed", {'border_style': 'dashed'}),
+        ("border_style", "Double Border", "double", {'border_style': 'double'}),
+        ("border_color", "Red Border", "thin + red", {'border_style': 'thin', 'border_color': 'FF0000'}),
+        ("border_style", "Dotted Border", "dotted", {'border_style': 'dotted'}),
+    ]
+    for prop, label, value, style in border_examples:
+        excel_file.write_cell("styling_examples", (row, 1), prop, content_style={'italic': True})
+        excel_file.write_cell("styling_examples", (row, 2), label, content_style=style)
+        excel_file.write_cell("styling_examples", (row, 3), value)
+        excel_file.write_cell("styling_examples", (row, 4), str(style))
+        row += 1
     row += 2
     
-    # Alignment examples
-    excel_file.write_cell("styling_examples", (row, 1), "Alignment Examples", bold=True, size=14)
+    # NUMBER FORMAT
+    excel_file.write_cell("styling_examples", (row, 1), "NUMBER FORMAT", content_style={'bold': True, 'size': 14, 'fgColor': 'D9E1F2'})
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)
+    row += 1
+    excel_file.write_cell("styling_examples", (row, 1), "Value", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 2), "Formatted", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 3), "Format Code", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 4), "Style Code", content_style={'bold': True})
+    row += 1
+    
+    number_examples = [
+        (1234.56, "#,##0.00", {'number_format': '#,##0.00'}),
+        (0.15, "0.00%", {'number_format': '0.00%'}),
+        (1234.56, "$#,##0.00", {'number_format': '$#,##0.00'}),
+        (1234, "0", {'number_format': '0'}),
+        (0.1234, "0.00", {'number_format': '0.00'}),
+    ]
+    for value, fmt, style in number_examples:
+        excel_file.write_cell("styling_examples", (row, 1), value)
+        excel_file.write_cell("styling_examples", (row, 2), value, content_style=style)
+        excel_file.write_cell("styling_examples", (row, 3), fmt)
+        excel_file.write_cell("styling_examples", (row, 4), str(style))
+        row += 1
     row += 2
     
-    excel_file.write_cell("styling_examples", (row, 1), "Left", horizontal="left")
-    excel_file.write_cell("styling_examples", (row, 2), "Center", horizontal="center")
-    excel_file.write_cell("styling_examples", (row, 3), "Right", horizontal="right")
-    excel_file.write_cell("styling_examples", (row, 4), "Top", vertical="top")
-    excel_file.write_cell("styling_examples", (row, 5), "Middle", vertical="center")
-    excel_file.write_cell("styling_examples", (row, 6), "Bottom", vertical="bottom")
-    excel_file.write_cell("styling_examples", (row, 7), "Wrap Text", wrapText=True, horizontal="left")
-    ws.cell(row, 7).value = "This is a long text that will wrap to multiple lines"
-    row += 2
+    # COMBINED EXAMPLES
+    excel_file.write_cell("styling_examples", (row, 1), "COMBINED STYLES", content_style={'bold': True, 'size': 14, 'fgColor': 'D9E1F2'})
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=4)
+    row += 1
+    excel_file.write_cell("styling_examples", (row, 1), "Description", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 2), "Example", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 3), "Combined Properties", content_style={'bold': True})
+    excel_file.write_cell("styling_examples", (row, 4), "Code", content_style={'bold': True})
+    row += 1
     
-    # Border examples
-    excel_file.write_cell("styling_examples", (row, 1), "Border Examples", bold=True, size=14)
-    row += 2
+    combined_examples = [
+        ("Bold + Yellow + Center", {'bold': True, 'fgColor': 'FFFF00', 'horizontal': 'center'}),
+        ("Italic + Blue + Right", {'italic': True, 'color': '0000FF', 'horizontal': 'right'}),
+        ("Bold + Green + Border", {'bold': True, 'fgColor': '00FF00', 'border_style': 'thin'}),
+        ("Large + Red + Center", {'size': 16, 'color': 'FF0000', 'horizontal': 'center', 'vertical': 'center'}),
+        ("All Styles Combined", {'bold': True, 'size': 14, 'fgColor': 'FFC7CE', 'color': '000000', 'horizontal': 'center', 'vertical': 'center', 'border_style': 'thick', 'border_color': 'FF0000'}),
+    ]
+    for desc, style in combined_examples:
+        excel_file.write_cell("styling_examples", (row, 1), desc, content_style={'italic': True})
+        excel_file.write_cell("styling_examples", (row, 2), desc, content_style=style)
+        excel_file.write_cell("styling_examples", (row, 3), ", ".join(f"{k}={v}" for k, v in style.items()))
+        excel_file.write_cell("styling_examples", (row, 4), str(style))
+        row += 1
     
-    excel_file.write_cell("styling_examples", (row, 1), "Thin Border", border_style="thin")
-    excel_file.write_cell("styling_examples", (row, 2), "Thick Border", border_style="thick")
-    excel_file.write_cell("styling_examples", (row, 3), "Dashed Border", border_style="dashed")
-    excel_file.write_cell("styling_examples", (row, 4), "Red Border", border_style="thin", border_color="FF0000")
-    excel_file.write_cell("styling_examples", (row, 5), "Double Border", border_style="double")
-    row += 2
-    
-    # Number format examples
-    excel_file.write_cell("styling_examples", (row, 1), "Number Format Examples", bold=True, size=14)
-    row += 2
-    
-    excel_file.write_cell("styling_examples", (row, 1), 1234.56, number_format="#,##0.00")
-    excel_file.write_cell("styling_examples", (row, 2), 0.15, number_format="0.00%")
-    excel_file.write_cell("styling_examples", (row, 3), 1234.56, number_format="$#,##0.00")
-    excel_file.write_cell("styling_examples", (row, 4), "2024-01-15", number_format="yyyy-mm-dd")
-    row += 2
-    
-    # Combined examples
-    excel_file.write_cell("styling_examples", (row, 1), "Combined Examples", bold=True, size=14)
-    row += 2
-    
-    excel_file.write_cell("styling_examples", (row, 1), "Bold+Yellow+Center", bold=True, fgColor="FFFF00", horizontal="center")
-    excel_file.write_cell("styling_examples", (row, 2), "Italic+Blue+Right", italic=True, color="0000FF", horizontal="right")
-    excel_file.write_cell("styling_examples", (row, 3), "Bold+Green+Border", bold=True, fgColor="00FF00", border_style="thin")
-    excel_file.write_cell("styling_examples", (row, 4), "Large+Red+Center", size=16, color="FF0000", horizontal="center", vertical="center")
+    # Auto-adjust column widths
+    from openpyxl.utils import get_column_letter
+    for col in range(1, 5):
+        ws.column_dimensions[get_column_letter(col)].width = 25
     
     excel_file.save()
-    print("Styling examples written to test.xlsx")
+    print("Complete styling examples written to test.xlsx")

@@ -114,11 +114,28 @@ class ExcelFile:
         Apply cell style to cell.
         kwargs: keyword arguments for cell style
         '''
+
+        '''
+        Font properties:
+            name: str           폰트 설정. 'Arial', 'Times New Roman', ...
+            size: int           글씨 크기 설정.
+            bold: bool          볼드체 여부 설정.
+            italic: bool        이탤릭체 여부 설정.
+            underline: str      밑줄 종류 설정. 'single', 'double', ...
+            color: str          RGB 색상 설정. 'FF0000', '00FF00', ...
+        '''
         if 'font' in kwargs:
             cell.font = kwargs.pop('font')
         elif font_props := {k: kwargs.pop(k) for k in ['name', 'size', 'bold', 'italic', 'underline', 'color'] if k in kwargs}:
             cell.font = Font(**font_props)
         
+        '''
+        Fill properties:
+            fgColor: str         배경색 설정. 'FF0000', '00FF00', ...
+            bgColor: str         배경색 설정. 'FF0000', '00FF00', ...
+            fill_type: str       채우기 종류 설정. 'solid', 'darkDown', ...
+            patternType: str     패턴 종류 설정. 'solid', 'darkDown', ...
+        '''
         if 'fill' in kwargs:
             cell.fill = kwargs.pop('fill')
         elif fill_props := {k: kwargs.pop(k) for k in ['fgColor', 'bgColor', 'fill_type', 'patternType'] if k in kwargs}:
@@ -126,7 +143,13 @@ class ExcelFile:
             if 'bgColor' in fill_props: fill_props['end_color'] = fill_props.pop('bgColor')
             if 'patternType' in fill_props: fill_props['fill_type'] = fill_props.pop('patternType')
             cell.fill = PatternFill(**fill_props)
-        
+
+        '''
+        Alignment properties:
+            horizontal: str     수평 정렬 종류 설정. 'left', 'center', 'right'
+            vertical: str       수직 정렬 종류 설정. 'top', 'center', 'bottom'
+            wrapText: bool      text 줄바꿈 여부 설정.
+        '''
         if 'alignment' in kwargs:
             cell.alignment = kwargs.pop('alignment')
         elif align_props := {k: kwargs.pop(k) for k in ['horizontal', 'vertical', 'wrapText'] if k in kwargs}:
@@ -168,24 +191,6 @@ if __name__ == "__main__":
     excel_file.write_cell("styling_examples", (row, 3), "Values", content_style={'bold': True})
     excel_file.write_cell("styling_examples", (row, 4), "Code", content_style={'bold': True})
     row += 1
-    
-    font_examples = [
-        ("name", "Font Name", "Arial", {'name': 'Arial'}),
-        ("size", "Font Size", "16pt", {'size': 16}),
-        ("bold", "Bold Text", "Bold", {'bold': True}),
-        ("italic", "Italic Text", "Italic", {'italic': True}),
-        ("underline", "Underline", "Underlined", {'underline': 'single'}),
-        ("color", "Font Color", "Red Text", {'color': 'FF0000'}),
-    ]
-    for prop, label, value, style in font_examples:
-        excel_file.write_cell("styling_examples", (row, 1), prop, content_style={'italic': True})
-        excel_file.write_cell("styling_examples", (row, 2), label, content_style=style)
-        excel_file.write_cell("styling_examples", (row, 3), value)
-        excel_file.write_cell("styling_examples", (row, 4), str(style))
-        row += 1
-    excel_file.write_cell("styling_examples", (row, 2), "Combined", content_style={'bold': True, 'italic': True, 'size': 14, 'color': '0000FF'})
-    excel_file.write_cell("styling_examples", (row, 4), "{'bold': True, 'italic': True, 'size': 14, 'color': '0000FF'}")
-    row += 2
     
     # FILL STYLES
     excel_file.write_cell("styling_examples", (row, 1), "FILL PROPERTIES", content_style={'bold': True, 'size': 14, 'fgColor': 'D9E1F2'})

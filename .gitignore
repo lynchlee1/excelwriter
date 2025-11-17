@@ -1,2 +1,7 @@
 *.xlsx
 *.xlsm
+config.py
+.DS_Store
+venv/
+*.pyc
+*.json

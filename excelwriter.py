@@ -76,25 +76,7 @@ class ExcelFile:
         ws.cell(row, col).value = content
         if content_style:
             self._apply_cell_style(ws.cell(row, col), **content_style)
-
-    ''' Pattern filling algorithm, but not used for now. Lets solve the real problem first.
+    
     def _apply_cell_style(self, cell, **kwargs):
-        font_props = ['name', 'size', 'bold', 'italic', 'underline', 'color']
-        font_kwargs = {k: kwargs.pop(k) for k in font_props if k in kwargs}
-        if font_kwargs:
-            cell.font = Font(**font_kwargs)
-        
-        fill_props = ['start_color', 'end_color', 'patternType']
-        fill_kwargs = {k: kwargs.pop(k) for k in fill_props if k in kwargs}
-        if fill_kwargs:
-            fill_kwargs.setdefault('patternType', 'solid')
-            cell.fill = PatternFill(**fill_kwargs)
-        
-        align_props = ['horizontal', 'vertical', 'wrap_text']
-        align_kwargs = {k: kwargs.pop(k) for k in align_props if k in kwargs}
-        if align_kwargs:
-            cell.alignment = Alignment(**align_kwargs)
-        
-        for key, value in kwargs.items():
-            if hasattr(cell, key): setattr(cell, key, value)
-    '''
+        pass # skip for now, lets solve the real problem first.
+    

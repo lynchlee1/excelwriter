@@ -73,7 +73,7 @@ def extract_sections(text):
 
 def search(node, keyword, parent_count=0, parent_node=None):
     """
-    1) Recursively search `node` for `keyword`
+    1) Recursively search node that contains `keyword`
     2) Return the ancestor `parent_count` levels above the matching node (0 for the matching node itself)
     """
     # parent_node is always a list of nodes
@@ -83,8 +83,8 @@ def search(node, keyword, parent_count=0, parent_node=None):
 
     matches = []
     def add_match(current_node, ancestry):
-        if parent_count == 0: matches.append(current_node)
-        elif parent_count <= len(ancestry): matches.append(ancestry[-parent_count])
+        if parent_count == 0: matches.append(current_node) # add itself
+        elif parent_count <= len(ancestry): matches.append(ancestry[-parent_count]) # add ancestor node
 
     if isinstance(node, dict):
         for key, value in node.items():
@@ -96,6 +96,15 @@ def search(node, keyword, parent_count=0, parent_node=None):
         if keyword in node: add_match(node, parents)
     return matches
 
+def search_tables(sections, keyword, parent_count=0):
+    tables = []
+    for section in sections:
+        if isinstance(section, dict):
+            for table in section.get("tables", []):
+                tables.extend(search(table, keyword, parent_count))
+        elif isinstance(section, list):
+            tables.extend(search(section, keyword, parent_count))
+    return tables
 def display_results(results):
     print("\n"+"="*100)
     seen_tables = set()
@@ -151,60 +160,17 @@ def get_report(rcept_no):
 
 if __name__ == "__main__":
     data = get_report("20251103000190")
-    
-    # Search for "기타위험" first, then search those results for "희석"
-    print("=== Searching for '기타위험' then '희석' ===")
-    results = search(data, "기타위험", 0)
-    # Now search the results for the second keyword
-    # If results contain tables or strings, search through them
-    filtered_results = []
-    for result in results:
-        # Search this result for the second keyword
-        sub_results = search(result, "희석", 0)
-        if sub_results:
-            filtered_results.extend(sub_results)
-        # Also check if the result itself contains both keywords
-        elif isinstance(result, str) and "희석" in result:
-            filtered_results.append(result)
-        elif isinstance(result, list) and len(result) > 0:
-            # Check if it's a table and contains the keyword
-            if isinstance(result[0], list):
-                # It's a table, check all cells
-                for row in result:
-                    for cell in row:
-                        if isinstance(cell, str) and "희석" in cell:
-                            filtered_results.append(result)
-                            break
-                    if result in filtered_results:
-                        break
-    
-    if filtered_results:
-        display_results(filtered_results)
-    else:
-        # If no results from filtered search, show results from first search
-        display_results(results)
+    # results = search(data, "기타위험", 0)
+    # results = search(results, "희석", 0)
 
-    # Second set of searches
-    print("\n=== Searching for '공모개요' then '청약기일' ===")
-    results = search(data, "공모개요", 0)
-    filtered_results = []
-    for result in results:
-        sub_results = search(result, "청약기일", 0)
-        if sub_results:
-            filtered_results.extend(sub_results)
-        elif isinstance(result, str) and "청약기일" in result:
-            filtered_results.append(result)
-        elif isinstance(result, list) and len(result) > 0:
-            if isinstance(result[0], list):
-                for row in result:
-                    for cell in row:
-                        if isinstance(cell, str) and "청약기일" in cell:
-                            filtered_results.append(result)
-                            break
-                    if result in filtered_results:
-                        break
+    sections = search(data, "공모개요", 0)
+    # first_table = search_tables(sections, "증권수량", 2)
+
+    # second_table = search_tables(sections, "인수인", 2)
+    # second_table = search_tables(second_table, "인수수량", 2)
+
+    third_table = search_tables(sections, "청약기일", 2)
     
-    if filtered_results:
-        display_results(filtered_results)
-    else:
-        display_results(results)
+    sections = search(data, "공모방법", 0)
+    text = search(sections, "신주모집")
+    print(text)

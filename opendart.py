@@ -11,25 +11,13 @@ def get_dart_report(rcept_no: str):
     response = requests.get(url)
     return response.content
 
-def unpack_zip(data):
-    with zipfile.ZipFile(BytesIO(data)) as zf:
-        content = zf.read(zf.namelist()[0])
-    try:
-        return content.decode('utf-8')
-    except UnicodeDecodeError:
-        return content.decode('cp949', errors='ignore')
-
-TABLE_PATTERN = re.compile(r'<TABLE[^>]*>.*?</TABLE>', re.DOTALL | re.IGNORECASE)
-ROW_PATTERN = re.compile(r'<TR[^>]*>(.*?)</TR>', re.DOTALL | re.IGNORECASE)
-CELL_PATTERN = re.compile(r'<T[DH][^>]*>(.*?)</T[DH]>', re.DOTALL | re.IGNORECASE)
-
-def _clean_html(text):
-    return re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', ' ', text)).strip()
+from webDataParser import unpack_zip, search, search_tables, clean_text
+from webDataParser import TABLE_PATTERN, ROW_PATTERN, CELL_PATTERN
 
 def _split_paragraphs(text):
     blocks = []
     for para in [p.strip() for p in re.split(r'\n\s*\n', text) if p.strip()]:
-        cleaned = _clean_html(para)
+        cleaned = clean_text(para)
         parts = [chunk.strip() for chunk in re.split(r'(?<=[.?!])\s+', cleaned) if chunk.strip()]
         if parts:
             blocks.append(parts)
@@ -38,7 +26,7 @@ def _split_paragraphs(text):
 def _parse_table(html):
     rows = []
     for row in ROW_PATTERN.findall(html):
-        cells = [_clean_html(cell) for cell in CELL_PATTERN.findall(row)]
+        cells = [clean_text(cell) for cell in CELL_PATTERN.findall(row)]
         if cells:
             rows.append(cells)
     return rows
@@ -71,40 +59,6 @@ def extract_sections(text):
             sections[title.replace(' ', '')] = split_texts(text[match.end():end].strip())
     return sections
 
-def search(node, keyword, parent_count=0, parent_node=None):
-    """
-    1) Recursively search node that contains `keyword`
-    2) Return the ancestor `parent_count` levels above the matching node (0 for the matching node itself)
-    """
-    # parent_node is always a list of nodes
-    if parent_node is None: parents = []
-    elif isinstance(parent_node, list): parents = parent_node
-    else: parents = [parent_node]
-
-    matches = []
-    def add_match(current_node, ancestry):
-        if parent_count == 0: matches.append(current_node) # add itself
-        elif parent_count <= len(ancestry): matches.append(ancestry[-parent_count]) # add ancestor node
-
-    if isinstance(node, dict):
-        for key, value in node.items():
-            if isinstance(key, str) and keyword in key: add_match(value, parents + [node])
-            matches.extend(search(value, keyword, parent_count, parents + [node]))
-    elif isinstance(node, list):
-        for item in node: matches.extend(search(item, keyword, parent_count, parents + [node]))
-    elif isinstance(node, str):
-        if keyword in node: add_match(node, parents)
-    return matches
-
-def search_tables(sections, keyword, parent_count=0):
-    tables = []
-    for section in sections:
-        if isinstance(section, dict):
-            for table in section.get("tables", []):
-                tables.extend(search(table, keyword, parent_count))
-        elif isinstance(section, list):
-            tables.extend(search(section, keyword, parent_count))
-    return tables
 def display_results(results):
     print("\n"+"="*100)
     seen_tables = set()
@@ -160,17 +114,19 @@ def get_report(rcept_no):
 
 if __name__ == "__main__":
     data = get_report("20251103000190")
-    # results = search(data, "기타위험", 0)
-    # results = search(results, "희석", 0)
 
-    sections = search(data, "공모개요", 0)
-    # first_table = search_tables(sections, "증권수량", 2)
+    section = search(data, "기타위험", 0)
+    texts = search(section, "희석", 0)
 
-    # second_table = search_tables(sections, "인수인", 2)
-    # second_table = search_tables(second_table, "인수수량", 2)
+    section = search(data, "공모개요", 0)
+    first_table = search_tables(section, "증권수량", 2)
+    stock_ipo_amount = first_table[0][1][1]
+    print(stock_ipo_amount)
+    second_table = search_tables(section, "인수인", 2)
+    print(second_table)
+    amount = search_tables(second_table, "인수수량", 2)
+    print(amount)
 
-    third_table = search_tables(sections, "청약기일", 2)
-    
-    sections = search(data, "공모방법", 0)
-    text = search(sections, "신주모집")
+    section = search(data, "공모방법", 0)
+    text = search(section, "신주모집")
     print(text)

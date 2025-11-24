@@ -25,26 +25,34 @@ def display(header, data, apply_function=None):
         for key, value in data.items(): display(f"{header} {key}:", value)
     else: print(f"{header}: {data}")
 
+from excelwriter import ExcelFile
 if __name__ == "__main__":
     rcept_no_list = [
         "20251121000355", "20251110000199", "20251107000522",
     ]
+    excel_file = f"ipo_reports.xlsx"
+    excel_writer = ExcelFile(excel_file)
     for rcept_no in rcept_no_list:
+        print("="*100)
         raw_text = unpack_zip(get_dart_report(rcept_no, API_KEY))
         with open(f"{rcept_no}_original.txt", "w", encoding="utf-8") as f: f.write(raw_text)
         data = get_report(rcept_no, API_KEY)
-
-        print("="*100)
-        print(f"[{rcept_no}] 파싱 시작")
+        sheet_name = f"{rcept_no}"
+        excel_writer.clear_sheet(sheet_name)
 
         section_risk = search_sections(data, "기타위험")
         stock_option_texts = search(section_risk, include_keywords="희석", parent_count=0)
-        display("희석", stock_option_texts)
+        new_stock_option_texts = []
+        for text in stock_option_texts:
+            if "상장" in text: new_stock_option_texts.append(text)
+        excel_writer.write_cell(sheet_name, (1, 1), "희석")
+        excel_writer.write_table_list(sheet_name, (1, 2), [new_stock_option_texts])
 
         section_ipo = search_sections(data, "공모개요")
         ipo_table_1 = search_tables(section_ipo, parent_count=2, include_keywords="증권수량")
         ipo_stock_count = lookup_column(ipo_table_1[0], "증권수량")
-        display("증권수량", ipo_stock_count)
+        excel_writer.write_cell(sheet_name, (2, 1), "증권수량")
+        excel_writer.write_cell(sheet_name, (2, 2), ipo_stock_count)
 
         ipo_table_2 = search_tables(section_ipo, parent_count=2, include_keywords="인수인")
         ipo_holder_names = lookup_column(ipo_table_2[0], "인수인")
@@ -69,3 +77,5 @@ if __name__ == "__main__":
         table_3_1 = search_tables(section_3, include_keywords=["희망공모","공모희망"], parent_count=2)
         price_range = lookup_row(table_3_1[0], ["희망공모","공모희망"])
         display("공모가 범위", price_range)
+    
+    excel_writer.save()
